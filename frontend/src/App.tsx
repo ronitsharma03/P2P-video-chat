@@ -52,7 +52,7 @@ const App = () => {
           handlePeerDisconnect();
           break;
         case "peer_skipped":
-          // Handle being skipped by peer
+          // Critical: Handle being skipped by peer
           handleBeingSkipped(socket);
           break;
         default:
@@ -70,7 +70,7 @@ const App = () => {
     setIsFindingMatch(true);
     socket.send(JSON.stringify({
       type: "match_request",
-      lastSkippedPeerId: lastSkippedPeerId // Send this to avoid matching with last skipped peer
+      lastSkippedPeerId: lastSkippedPeerId
     }));
   };
 
@@ -114,10 +114,19 @@ const App = () => {
       receivingPcRef.current.close();
       receivingPcRef.current = null;
     }
-
+  
     if (remoteVideoRef.current) {
+      if (remoteVideoRef.current.srcObject) {
+        const stream = remoteVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => {
+          track.stop();
+        });
+      }
       remoteVideoRef.current.srcObject = null;
     }
+  
+    // Clear any pending candidates
+    pendingCandidates.current = [];
   };
 
   const handleMatched = async (socket: WebSocket, newRoomId: string, _peerId: string) => {
@@ -136,7 +145,6 @@ const App = () => {
         socket.send(JSON.stringify({ 
           type: "candidate", 
           candidate: event.candidate,
-          connectionType: "sender",
           roomId: newRoomId
         }));
       }
@@ -189,7 +197,6 @@ const App = () => {
         socket.send(JSON.stringify({ 
           type: "candidate", 
           candidate: event.candidate,
-          connectionType: "receiver",
           roomId: offerRoomId
         }));
       }
@@ -300,7 +307,11 @@ const App = () => {
 
   const handlePeerDisconnect = () => {
     console.log("Peer disconnected");
+    
+    // First clean up existing connections
     cleanupConnections();
+    
+    // Then update state
     setIsConnecting(false);
     setRoomId(null);
     
@@ -310,23 +321,16 @@ const App = () => {
     }
   };
 
-  // New function to handle being skipped by the other user
+  // Critically improved handler for being skipped
   const handleBeingSkipped = (socket: WebSocket) => {
-    console.log("You've been skipped by the other user");
-    
-    // Store the peer ID to avoid matching again
-    if (roomId) {
-      // In a real implementation, the server would send the peer's ID
-      // For now we'll just use the roomId as a proxy
-      setLastSkippedPeerId(roomId);
-    }
-    
-    // Clean up existing connection
+    // First cleanup existing connections
     cleanupConnections();
-    setRoomId(null);
-    setIsConnecting(false);
     
-    // Automatically start looking for a new match
+    // Reset UI states
+    setIsConnecting(false);
+    setRoomId(null);
+    
+    // Automatically request a new match
     requestMatch(socket);
   };
 
@@ -341,10 +345,13 @@ const App = () => {
         roomId
       }));
       
-      // Clean up existing connection
+      // First, clean up existing connections
       cleanupConnections();
+      
+      // Then update UI state
       setRoomId(null);
       setIsConnecting(false);
+      setIsFindingMatch(true); // Show finding match UI immediately
       
       // Request a new match
       requestMatch(ws);
@@ -434,6 +441,7 @@ const App = () => {
                 playsInline
                 className="w-full h-full object-cover"
               />
+              {/* Different states for remote video */}
               {isConnecting && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
                   <div className="text-center">
@@ -447,7 +455,7 @@ const App = () => {
                   <p className="text-white text-lg">No one connected</p>
                 </div>
               )}
-              {isFindingMatch && !isConnecting && (
+              {isFindingMatch && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
                   <div className="text-center">
                     <div className="animate-bounce text-white text-5xl mb-4">👋</div>
