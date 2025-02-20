@@ -12,6 +12,7 @@ const App = () => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isFindingMatch, setIsFindingMatch] = useState(true);
+  const [lastSkippedPeerId, setLastSkippedPeerId] = useState<string | null>(null);
   
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -36,7 +37,7 @@ const App = () => {
 
       switch(message.type){
         case "matched":
-          handleMatched(socket, message.roomId);
+          handleMatched(socket, message.roomId, message.peerId);
           break;
         case "offer": 
           handleOffer(socket, message);
@@ -49,6 +50,10 @@ const App = () => {
           break;
         case "peer_disconnected":
           handlePeerDisconnect();
+          break;
+        case "peer_skipped":
+          // Handle being skipped by peer
+          handleBeingSkipped(socket);
           break;
         default:
           console.log("Unknown message type");
@@ -63,7 +68,10 @@ const App = () => {
 
   const requestMatch = (socket: WebSocket) => {
     setIsFindingMatch(true);
-    socket.send(JSON.stringify({type: "match_request"}));
+    socket.send(JSON.stringify({
+      type: "match_request",
+      lastSkippedPeerId: lastSkippedPeerId // Send this to avoid matching with last skipped peer
+    }));
   };
 
   // Setup local media once - separate from WebRTC setup
@@ -112,7 +120,9 @@ const App = () => {
     }
   };
 
-  const handleMatched = async (socket: WebSocket, newRoomId: string) => {
+  const handleMatched = async (socket: WebSocket, newRoomId: string, peerId: string) => {
+    // Clear the last skipped peer ID since we have a new match
+    setLastSkippedPeerId(null);
     setRoomId(newRoomId);
     setIsConnecting(true);
     setIsFindingMatch(false);
@@ -300,15 +310,36 @@ const App = () => {
     }
   };
 
+  // New function to handle being skipped by the other user
+  const handleBeingSkipped = (socket: WebSocket) => {
+    console.log("You've been skipped by the other user");
+    
+    // Store the peer ID to avoid matching again
+    if (roomId) {
+      // In a real implementation, the server would send the peer's ID
+      // For now we'll just use the roomId as a proxy
+      setLastSkippedPeerId(roomId);
+    }
+    
+    // Clean up existing connection
+    cleanupConnections();
+    setRoomId(null);
+    setIsConnecting(false);
+    
+    // Automatically start looking for a new match
+    requestMatch(socket);
+  };
+
   const skipCurrentPeer = () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      // Notify server about skipping
-      if (roomId) {
-        ws.send(JSON.stringify({
-          type: "skip_peer",
-          roomId
-        }));
-      }
+    if (ws && ws.readyState === WebSocket.OPEN && roomId) {
+      // Store the current roomId to avoid matching again
+      setLastSkippedPeerId(roomId);
+      
+      // Notify server about skipping (server will notify the other peer)
+      ws.send(JSON.stringify({
+        type: "skip_peer",
+        roomId
+      }));
       
       // Clean up existing connection
       cleanupConnections();
@@ -416,6 +447,14 @@ const App = () => {
                   <p className="text-white text-lg">No one connected</p>
                 </div>
               )}
+              {isFindingMatch && !isConnecting && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                  <div className="text-center">
+                    <div className="animate-bounce text-white text-5xl mb-4">👋</div>
+                    <p className="text-white text-lg">Looking for someone...</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -447,8 +486,10 @@ const App = () => {
           {/* Skip Button */}
           <button
             onClick={skipCurrentPeer}
-            className="flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
-            disabled={!roomId && isFindingMatch}
+            className={`flex items-center justify-center gap-2 py-3 px-6 ${
+              roomId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'
+            } text-white rounded-full transition-colors`}
+            disabled={!roomId}
           >
             <SkipForward size={20} /> Skip to Next
           </button>
