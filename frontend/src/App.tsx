@@ -120,7 +120,7 @@ const App = () => {
     }
   };
 
-  const handleMatched = async (socket: WebSocket, newRoomId: string, peerId: string) => {
+  const handleMatched = async (socket: WebSocket, newRoomId: string, _peerId: string) => {
     // Clear the last skipped peer ID since we have a new match
     setLastSkippedPeerId(null);
     setRoomId(newRoomId);
