@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from "react";
+import { MicOff, Mic, Video, VideoOff, SkipForward } from "lucide-react";
 
-const STUN_SERVERS: RTCConfiguration = { 
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }] 
+const STUN_SERVERS: RTCConfiguration = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 };
 
 const App = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isFindingMatch, setIsFindingMatch] = useState(true);
+  
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -22,7 +27,7 @@ const App = () => {
 
     socket.onopen = () => {
       console.log("Connected to the signaling server");
-      socket.send(JSON.stringify({type: "match_request"}));
+      requestMatch(socket);
     }
 
     socket.onmessage = async (event) => {
@@ -55,6 +60,11 @@ const App = () => {
       cleanupConnections();
     }
   }, []);
+
+  const requestMatch = (socket: WebSocket) => {
+    setIsFindingMatch(true);
+    socket.send(JSON.stringify({type: "match_request"}));
+  };
 
   // Setup local media once - separate from WebRTC setup
   useEffect(() => {
@@ -96,11 +106,16 @@ const App = () => {
       receivingPcRef.current.close();
       receivingPcRef.current = null;
     }
+
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
   };
 
   const handleMatched = async (socket: WebSocket, newRoomId: string) => {
     setRoomId(newRoomId);
     setIsConnecting(true);
+    setIsFindingMatch(false);
     
     // Create sending peer connection
     const sendingPc = new RTCPeerConnection(STUN_SERVERS);
@@ -145,6 +160,7 @@ const App = () => {
 
   const handleOffer = async (socket: WebSocket, message: any) => {
     setIsConnecting(true);
+    setIsFindingMatch(false);
     const offerRoomId = message.roomId;
     setRoomId(offerRoomId);
     
@@ -276,41 +292,167 @@ const App = () => {
     console.log("Peer disconnected");
     cleanupConnections();
     setIsConnecting(false);
+    setRoomId(null);
     
     // Reconnect after peer disconnect
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({type: "match_request"}));
+      requestMatch(ws);
+    }
+  };
+
+  const skipCurrentPeer = () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // Notify server about skipping
+      if (roomId) {
+        ws.send(JSON.stringify({
+          type: "skip_peer",
+          roomId
+        }));
+      }
+      
+      // Clean up existing connection
+      cleanupConnections();
+      setRoomId(null);
+      setIsConnecting(false);
+      
+      // Request a new match
+      requestMatch(ws);
+    }
+  };
+
+  const toggleAudio = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !isAudioEnabled;
+        setIsAudioEnabled(!isAudioEnabled);
+      }
+    }
+  };
+
+  const toggleVideo = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoEnabled;
+        setIsVideoEnabled(!isVideoEnabled);
+      }
     }
   };
 
   return (
-    <div className="app-container">
-      <div className="video-container">
-        <div className="video-wrapper">
-          <h3>Your Video</h3>
-          <video
-            ref={localVideoRef}
-            autoPlay
-            muted
-            playsInline
-            className="video-element"
-          />
+    <div className="flex flex-col min-h-screen bg-gray-100 p-4">
+      <div className="max-w-6xl mx-auto w-full">
+        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">Random Video Chat</h1>
+        
+        {/* Status Indicator */}
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800">
+            {isFindingMatch ? (
+              <span className="flex items-center">
+                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-blue-600"></span>
+                Finding someone to chat with...
+              </span>
+            ) : isConnecting ? (
+              <span className="flex items-center">
+                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-yellow-500"></span>
+                Connecting...
+              </span>
+            ) : roomId ? (
+              <span className="flex items-center">
+                <span className="mr-2 h-2 w-2 rounded-full bg-green-500"></span>
+                Connected to chat
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-red-500"></span>
+                Disconnected
+              </span>
+            )}
+          </div>
         </div>
         
-        <div className="video-wrapper">
-          <h3>Remote Video</h3>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="video-element"
-          />
-          {isConnecting && <div className="connecting-overlay">Connecting...</div>}
+        {/* Video Container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Local Video */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+            <h3 className="p-2 bg-gray-800 text-white text-center">Your Video</h3>
+            <div className="aspect-video bg-black relative">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              {!isVideoEnabled && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                  <p className="text-white text-lg">Camera Off</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Remote Video */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+            <h3 className="p-2 bg-gray-800 text-white text-center">Remote Video</h3>
+            <div className="aspect-video bg-black relative">
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              {isConnecting && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+                    <p className="text-white text-lg">Connecting...</p>
+                  </div>
+                </div>
+              )}
+              {!roomId && !isConnecting && !isFindingMatch && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                  <p className="text-white text-lg">No one connected</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <div className="status-container">
-        {roomId ? `Connected to room: ${roomId}` : "Finding a match..."}
+        
+        {/* Controls */}
+        <div className="flex flex-wrap justify-center gap-4 mb-6">
+          {/* Audio Toggle */}
+          <button 
+            onClick={toggleAudio}
+            className={`flex items-center justify-center p-3 rounded-full ${
+              isAudioEnabled ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'
+            } transition-colors`}
+            aria-label={isAudioEnabled ? "Mute microphone" : "Unmute microphone"}
+          >
+            {isAudioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+          </button>
+          
+          {/* Video Toggle */}
+          <button
+            onClick={toggleVideo}
+            className={`flex items-center justify-center p-3 rounded-full ${
+              isVideoEnabled ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'
+            } transition-colors`}
+            aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
+          >
+            {isVideoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+          </button>
+          
+          {/* Skip Button */}
+          <button
+            onClick={skipCurrentPeer}
+            className="flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
+            disabled={!roomId && isFindingMatch}
+          >
+            <SkipForward size={20} /> Skip to Next
+          </button>
+        </div>
       </div>
     </div>
   );
