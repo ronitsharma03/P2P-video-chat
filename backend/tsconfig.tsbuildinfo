@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/managers/RoomManager.ts","./src/managers/signalingServer.ts","./src/utils/types.ts"],"version":"5.7.2"}
