@@ -5,12 +5,20 @@ import { v4 as uuidv4 } from "uuid";
 export class RoomManager {
   private rooms: Map<string, roomType> = new Map();
   private waitingQueue: Set<WebSocket>;
+  private matchingLock: boolean = false;
 
   constructor() {
     this.waitingQueue = new Set();
   }
 
   handleMatchRequest(ws: WebSocket) {
+    if(this.matchingLock){ // prevent multiple user from interfering
+      this.waitingQueue.add(ws);
+      return;
+    }
+
+    this.matchingLock = true; // Locking
+
     this.waitingQueue.delete(ws); // Ensures the user is not already in queue
     const peer = this.waitingQueue.values().next().value; // Getting the next available user
 
@@ -30,6 +38,7 @@ export class RoomManager {
     } else {
       this.waitingQueue.add(ws);
     }
+    this.matchingLock = false; // unlocking
   }
 
   forwardMessage(ws: WebSocket, message: signalMessageType) {
