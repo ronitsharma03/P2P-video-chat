@@ -12,7 +12,8 @@ export class RoomManager {
   }
 
   handleMatchRequest(ws: WebSocket) {
-    if(this.matchingLock){ // prevent multiple user from interfering
+    if (this.matchingLock) {
+      // prevent multiple user from interfering
       this.waitingQueue.add(ws);
       return;
     }
@@ -53,17 +54,17 @@ export class RoomManager {
       peer.send(JSON.stringify(message));
     }
   }
-  
+
   handleSkip(ws: WebSocket, message: signalMessageType) {
     const roomId = message.roomId;
     if (!roomId || !this.rooms.has(roomId)) return;
-  
+
     const room = this.rooms.get(roomId);
     if (!room) return;
-  
+
     const peer = room.user1 === ws ? room.user2 : room.user1;
     this.rooms.delete(roomId);
-  
+
     if (peer.readyState === WebSocket.OPEN) {
       peer.send(JSON.stringify({ type: "peer_skipped" }));
     }
@@ -71,16 +72,16 @@ export class RoomManager {
 
   handleDisconnect(ws: WebSocket) {
     this.waitingQueue.delete(ws);
-    console.log("Client disconnected")
-    for(const [roomId, room] of this.rooms.entries()){
-        if(room.user1 === ws || room.user2 === ws){
-            const peer = room.user1 === ws ? room.user2 : room.user1;
-            this.rooms.delete(roomId);
-            if(peer.readyState === WebSocket.OPEN){
-                peer.send(JSON.stringify({type: "peer_disconnected"}));
-            }
-            break;
+    console.log("Client disconnected");
+    for (const [roomId, room] of this.rooms.entries()) {
+      if (room.user1 === ws || room.user2 === ws) {
+        const peer = room.user1 === ws ? room.user2 : room.user1;
+        this.rooms.delete(roomId);
+        if (peer.readyState === WebSocket.OPEN) {
+          peer.send(JSON.stringify({ type: "peer_disconnected" }));
         }
+        break;
+      }
     }
   }
 }
