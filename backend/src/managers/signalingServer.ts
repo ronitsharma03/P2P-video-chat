@@ -40,15 +40,17 @@ export class SignalingServer {
 
       switch (message.type) {
         case "match_request":
-          this.roomManager.handleMatchRequest(ws)
+          this.roomManager.handleMatchRequest(ws);
           break;
 
         case "offer":
         case "answer":
         case "candidate":
-          this.roomManager.forwardMessage(ws, message)
+          this.roomManager.forwardMessage(ws, message);
           break;
-
+        case "skip_peer":
+          this.roomManager.handleSkip(ws, message);
+          break;
         default:
           console.log("Unkonwn message received");
       }

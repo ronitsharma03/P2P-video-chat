@@ -53,6 +53,21 @@ export class RoomManager {
       peer.send(JSON.stringify(message));
     }
   }
+  
+  handleSkip(ws: WebSocket, message: signalMessageType) {
+    const roomId = message.roomId;
+    if (!roomId || !this.rooms.has(roomId)) return;
+  
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+  
+    const peer = room.user1 === ws ? room.user2 : room.user1;
+    this.rooms.delete(roomId);
+  
+    if (peer.readyState === WebSocket.OPEN) {
+      peer.send(JSON.stringify({ type: "peer_skipped" }));
+    }
+  }
 
   handleDisconnect(ws: WebSocket) {
     this.waitingQueue.delete(ws);
