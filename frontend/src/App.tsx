@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MicOff, Mic, Video, VideoOff, SkipForward } from "lucide-react";
+import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
 
 const STUN_SERVERS: RTCConfiguration = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -392,146 +394,155 @@ const App = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100 p-4">
-      <div className="max-w-6xl mx-auto w-full">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          Random Video Chat
-        </h1>
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      {/* Navbar Component */}
+      <Navbar />
+      
+      {/* Main Content */}
+      <main className="flex-grow p-4">
+        <div className="max-w-6xl mx-auto w-full">
+          <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
+            Random Video Chat
+          </h1>
 
-        {/* Status Indicator */}
-        <div className="text-center mb-4">
-          <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800">
-            {isFindingMatch ? (
-              <span className="flex items-center">
-                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-blue-600"></span>
-                Finding someone to chat with...
-              </span>
-            ) : isConnecting ? (
-              <span className="flex items-center">
-                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-yellow-500"></span>
-                Connecting...
-              </span>
-            ) : roomId ? (
-              <span className="flex items-center">
-                <span className="mr-2 h-2 w-2 rounded-full bg-green-500"></span>
-                Connected to chat
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-red-500"></span>
-                Disconnected
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Video Container */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          {/* Local Video */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
-            <h3 className="p-2 bg-gray-800 text-white text-center">
-              Your Video
-            </h3>
-            <div className="aspect-video bg-black relative">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              {!isVideoEnabled && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
-                  <p className="text-white text-lg">Camera Off</p>
-                </div>
+          {/* Status Indicator */}
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800">
+              {isFindingMatch ? (
+                <span className="flex items-center">
+                  <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-blue-600"></span>
+                  Finding someone to chat with...
+                </span>
+              ) : isConnecting ? (
+                <span className="flex items-center">
+                  <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-yellow-500"></span>
+                  Connecting...
+                </span>
+              ) : roomId ? (
+                <span className="flex items-center">
+                  <span className="mr-2 h-2 w-2 rounded-full bg-green-500"></span>
+                  Connected to chat
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <span className="animate-pulse mr-2 h-2 w-2 rounded-full bg-red-500"></span>
+                  Disconnected
+                </span>
               )}
             </div>
           </div>
 
-          {/* Remote Video */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
-            <h3 className="p-2 bg-gray-800 text-white text-center">
-              Remote Video
-            </h3>
-            <div className="aspect-video bg-black relative">
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
-              {/* Different states for remote video */}
-              {isConnecting && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-white text-lg">Connecting...</p>
+          {/* Video Container */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Local Video */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+              <h3 className="p-2 bg-gray-800 text-white text-center">
+                Your Video
+              </h3>
+              <div className="aspect-video bg-black relative">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                {!isVideoEnabled && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                    <p className="text-white text-lg">Camera Off</p>
                   </div>
-                </div>
-              )}
-              {!roomId && !isConnecting && !isFindingMatch && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
-                  <p className="text-white text-lg">No one connected</p>
-                </div>
-              )}
-              {isFindingMatch && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
-                  <div className="text-center">
-                    <div className="animate-bounce text-white text-5xl mb-4">
-                      👋
+                )}
+              </div>
+            </div>
+
+            {/* Remote Video */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden relative">
+              <h3 className="p-2 bg-gray-800 text-white text-center">
+                Remote Video
+              </h3>
+              <div className="aspect-video bg-black relative">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+                {/* Different states for remote video */}
+                {isConnecting && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+                      <p className="text-white text-lg">Connecting...</p>
                     </div>
-                    <p className="text-white text-lg">Looking for someone...</p>
                   </div>
-                </div>
-              )}
+                )}
+                {!roomId && !isConnecting && !isFindingMatch && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                    <p className="text-white text-lg">No one connected</p>
+                  </div>
+                )}
+                {isFindingMatch && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-70">
+                    <div className="text-center">
+                      <div className="animate-bounce text-white text-5xl mb-4">
+                        👋
+                      </div>
+                      <p className="text-white text-lg">Looking for someone...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Controls */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6">
+            {/* Audio Toggle */}
+            <button
+              onClick={toggleAudio}
+              className={`flex items-center justify-center p-3 rounded-full ${
+                isAudioEnabled
+                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                  : "bg-red-100 text-red-800 hover:bg-red-200"
+              } transition-colors`}
+              aria-label={
+                isAudioEnabled ? "Mute microphone" : "Unmute microphone"
+              }
+            >
+              {isAudioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+            </button>
+
+            {/* Video Toggle */}
+            <button
+              onClick={toggleVideo}
+              className={`flex items-center justify-center p-3 rounded-full ${
+                isVideoEnabled
+                  ? "bg-green-100 text-green-800 hover:bg-green-200"
+                  : "bg-red-100 text-red-800 hover:bg-red-200"
+              } transition-colors`}
+              aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
+            >
+              {isVideoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+            </button>
+
+            {/* Skip Button */}
+            <button
+              onClick={skipCurrentPeer}
+              className={`flex items-center justify-center gap-2 py-3 px-6 ${
+                roomId
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-400 cursor-not-allowed"
+              } text-white rounded-full transition-colors`}
+              disabled={!roomId}
+            >
+              <SkipForward size={20} /> Skip to Next
+            </button>
+          </div>
         </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap justify-center gap-4 mb-6">
-          {/* Audio Toggle */}
-          <button
-            onClick={toggleAudio}
-            className={`flex items-center justify-center p-3 rounded-full ${
-              isAudioEnabled
-                ? "bg-green-100 text-green-800 hover:bg-green-200"
-                : "bg-red-100 text-red-800 hover:bg-red-200"
-            } transition-colors`}
-            aria-label={
-              isAudioEnabled ? "Mute microphone" : "Unmute microphone"
-            }
-          >
-            {isAudioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
-          </button>
-
-          {/* Video Toggle */}
-          <button
-            onClick={toggleVideo}
-            className={`flex items-center justify-center p-3 rounded-full ${
-              isVideoEnabled
-                ? "bg-green-100 text-green-800 hover:bg-green-200"
-                : "bg-red-100 text-red-800 hover:bg-red-200"
-            } transition-colors`}
-            aria-label={isVideoEnabled ? "Turn off camera" : "Turn on camera"}
-          >
-            {isVideoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
-          </button>
-
-          {/* Skip Button */}
-          <button
-            onClick={skipCurrentPeer}
-            className={`flex items-center justify-center gap-2 py-3 px-6 ${
-              roomId
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-400 cursor-not-allowed"
-            } text-white rounded-full transition-colors`}
-            disabled={!roomId}
-          >
-            <SkipForward size={20} /> Skip to Next
-          </button>
-        </div>
-      </div>
+      </main>
+      
+      {/* Footer Component */}
+      <Footer />
     </div>
   );
 };
