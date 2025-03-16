@@ -172,15 +172,17 @@ const App = () => {
     }
 
     try {
-      const offer = await sendingPc.createOffer();
-      await sendingPc.setLocalDescription(offer);
-      socket.send(
-        JSON.stringify({
-          type: "offer",
-          sdp: offer.sdp,
-          roomId: newRoomId,
-        })
-      );
+      sendingPc.onnegotiationneeded = async () => {
+        const offer = await sendingPc.createOffer();
+        await sendingPc.setLocalDescription(offer);
+        socket.send(
+          JSON.stringify({
+            type: "offer",
+            sdp: offer.sdp,
+            roomId: newRoomId,
+          })
+        );
+      };
     } catch (err) {
       console.error("Error creating/sending offer:", err);
       setIsConnecting(false);
@@ -397,7 +399,7 @@ const App = () => {
     <div className="flex flex-col min-h-screen bg-gray-100">
       {/* Navbar Component */}
       <Navbar />
-      
+
       {/* Main Content */}
       <main className="flex-grow p-4">
         <div className="max-w-6xl mx-auto w-full">
@@ -487,7 +489,9 @@ const App = () => {
                       <div className="animate-bounce text-white text-5xl mb-4">
                         👋
                       </div>
-                      <p className="text-white text-lg">Looking for someone...</p>
+                      <p className="text-white text-lg">
+                        Looking for someone...
+                      </p>
                     </div>
                   </div>
                 )}
@@ -540,7 +544,7 @@ const App = () => {
           </div>
         </div>
       </main>
-      
+
       {/* Footer Component */}
       <Footer />
     </div>
