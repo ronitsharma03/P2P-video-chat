@@ -1,4 +1,4 @@
-import { WebSocket  } from "ws";
+import { WebSocket } from "ws";
 
 export interface signalMessageType {
   type: string;
@@ -8,8 +8,6 @@ export interface signalMessageType {
 }
 
 export interface roomType {
-    user1: WebSocket;
-    user2: WebSocket;
+  user1: WebSocket;
+  user2: WebSocket;
 }
-
-
